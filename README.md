@@ -39,6 +39,16 @@ reports/
 data/alzheimer/
   train/
   test/
+demo/
+  demo_prototype_alzheimer.mp4
+```
+
+## Demonstration
+
+La video de demonstration du prototype est disponible dans :
+
+```text
+demo/demo_prototype_alzheimer.mp4
 ```
 
 ## Regle de validation
