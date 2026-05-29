@@ -1,0 +1,190 @@
+
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Alzheimer MRI Clinical Workstation</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <section class="topbar">
+      <div>
+        <p class="eyebrow">Computer Vision Medical Imaging</p>
+        <h1>Alzheimer MRI Clinical Workstation</h1>
+        <p class="subtitle">Classification IRM en 4 classes avec CNN, Grad-CAM, GLCM/LBP, tableau de bord et exports cliniques.</p>
+      </div>
+      <div class="status" id="apiStatus">API non testee</div>
+    </section>
+
+    <section class="model-performance">
+      <div class="performance-card highlight">
+        <span>Test accuracy</span>
+        <strong>94.38%</strong>
+        <small>Performance globale sur le test</small>
+      </div>
+      <div class="performance-card">
+        <span>Test loss</span>
+        <strong>0.1748</strong>
+        <small>Erreur moyenne du modele</small>
+      </div>
+      <div class="performance-card">
+        <span>Macro F1-score</span>
+        <strong>0.93</strong>
+        <small>Moyenne non ponderee des classes</small>
+      </div>
+      <div class="performance-card">
+        <span>Weighted F1-score</span>
+        <strong>0.94</strong>
+        <small>Moyenne ponderee par support</small>
+      </div>
+    </section>
+
+    <section class="panel model-report">
+      <div class="section-head compact">
+        <h2>Performance par classe du modele CNN</h2>
+        <span class="badge">Evaluation test set</span>
+      </div>
+      <div class="class-metrics-table">
+        <div class="class-metrics-head">
+          <span>Classe</span><span>Precision</span><span>Recall</span><span>F1-score</span><span>Support</span>
+        </div>
+        <div class="class-metrics-row"><b>MildDemented</b><span>0.92</span><span>0.98</span><span>0.95</span><span>179</span></div>
+        <div class="class-metrics-row caution"><b>ModerateDemented</b><span>0.76</span><span>1.00</span><span>0.87</span><span>13</span></div>
+        <div class="class-metrics-row"><b>NonDemented</b><span>0.98</span><span>0.91</span><span>0.95</span><span>640</span></div>
+        <div class="class-metrics-row"><b>VeryMildDemented</b><span>0.91</span><span>0.97</span><span>0.94</span><span>448</span></div>
+      </div>
+      <p class="model-note">
+        Lecture : le modele est performant globalement, mais la classe ModerateDemented doit etre interpretee avec prudence car son support de test est faible.
+      </p>
+    </section>
+
+    <section class="case-layout">
+      <aside class="panel controls">
+        <h2>Dossier examen</h2>
+        <div class="form-grid single">
+          <label>Patient ID<input id="patientId" placeholder="ex: P-001" /></label>
+          <label>Age<input id="patientAge" type="number" min="1" max="120" placeholder="ex: 72" /></label>
+          <label>Sexe<select id="patientSex"><option value="Non renseigne">Non renseigne</option><option>Femme</option><option>Homme</option></select></label>
+          <label>Medecin<input id="clinicianName" placeholder="ex: Dr. ..." /></label>
+          <label>Sequence<select id="mriSequence"><option>T1 MRI</option><option>T2 MRI</option><option>FLAIR</option></select></label>
+        </div>
+        <h2>Image IRM</h2>
+        <label class="dropzone" for="imageInput" id="dropzone">
+          <span>Choisir une image</span>
+          <small>PNG, JPG ou JPEG</small>
+        </label>
+        <input id="imageInput" type="file" accept="image/*" />
+        <button id="predictBtn" disabled>Analyser l'examen</button>
+      </aside>
+
+      <section class="panel viewer">
+        <div class="section-head compact">
+          <h2>Visionneuse</h2>
+          <div class="view-tabs">
+            <button class="tab-btn active" data-view="original">Original</button>
+            <button class="tab-btn" data-view="processed">Pretraitee</button>
+            <button class="tab-btn" data-view="gradcam">Grad-CAM</button>
+          </div>
+        </div>
+        <div class="image-stack">
+          <img id="originalPreview" class="view-img active" alt="Apercu original" />
+          <img id="processedImage" class="view-img" alt="Image pretraitee" />
+          <img id="gradcamImage" class="view-img" alt="Grad-CAM" />
+        </div>
+      </section>
+
+      <section class="panel result">
+        <h2>Decision assistee</h2>
+        <div class="prediction">
+          <span id="predictedClass">-</span>
+          <strong id="confidence">0%</strong>
+        </div>
+        <div class="triage-card" id="triageCard">
+          <span>Priorite</span><strong>-</strong>
+        </div>
+        <div id="probabilities" class="probabilities"></div>
+      </section>
+    </section>
+
+    <section class="metric-grid">
+      <div class="panel dashboard-panel">
+        <div class="section-head compact">
+          <h2>Tableau de bord</h2>
+          <button class="ghost-button" id="exportStatsBtn">Exporter CSV</button>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi-card"><span>Analyses</span><strong id="kpiTotal">0</strong></div>
+          <div class="kpi-card"><span>Confiance moyenne</span><strong id="kpiConfidence">0%</strong></div>
+          <div class="kpi-card"><span>Cas a revoir</span><strong id="kpiReview">0</strong></div>
+          <div class="kpi-card"><span>Classe dominante</span><strong id="kpiDominant">-</strong></div>
+        </div>
+        <div class="chart-block">
+          <div class="chart-title">Distribution locale des predictions</div>
+          <div id="classChart" class="class-chart empty">Aucune donnee.</div>
+        </div>
+      </div>
+      <div class="panel metric-panel">
+        <h2>Qualite image</h2>
+        <div id="qualityMetrics" class="metric-list empty">Analyse non lancee.</div>
+      </div>
+      <div class="panel metric-panel">
+        <h2>Texture GLCM</h2>
+        <div id="glcmMetrics" class="metric-list empty">Analyse non lancee.</div>
+      </div>
+      <div class="panel metric-panel">
+        <h2>Texture LBP</h2>
+        <div id="lbpMetrics" class="metric-list empty">Analyse non lancee.</div>
+      </div>
+    </section>
+
+    <section class="panel interpretation">
+      <div class="section-head">
+        <h2>Compte rendu automatique</h2>
+        <div class="actions">
+          <button class="ghost-button" id="copyReportBtn" disabled>Copier</button>
+          <button class="ghost-button" id="downloadReportBtn" disabled>Exporter TXT</button>
+        </div>
+      </div>
+      <p id="interpretationText">Charge une image pour afficher l'analyse.</p>
+      <div class="report-box" id="reportBox">Aucun rapport disponible.</div>
+    </section>
+
+    <section class="explain-grid">
+      <div class="panel">
+        <h2>Pipeline clinique</h2>
+        <ol class="pipeline-list">
+          <li>Saisie des informations patient et examen</li>
+          <li>Preprocessing : crop, denoising, normalisation</li>
+          <li>Classification CNN en 4 classes</li>
+          <li>Analyse de texture : GLCM et LBP</li>
+          <li>Visualisation explicative par Grad-CAM</li>
+          <li>Generation d'un compte rendu exportable</li>
+        </ol>
+      </div>
+      <div class="panel history-panel">
+        <div class="section-head compact">
+          <h2>Historique local avec images</h2>
+          <div class="actions">
+            <button class="ghost-button" id="exportHistoryBtn">Exporter CSV</button>
+            <button class="ghost-button" id="clearHistoryBtn">Effacer</button>
+          </div>
+        </div>
+        <div id="historyList" class="history-list empty">Aucune analyse sauvegardee.</div>
+      </div>
+    </section>
+
+    <section class="panel ai-panel">
+      <div class="section-head">
+        <h2>Synthese d'aide a l'analyse</h2>
+        <button class="ghost-button" id="exportJsonBtn" disabled>Exporter JSON</button>
+      </div>
+      <div id="aiAssistant" class="ai-assistant">
+        Lance une analyse pour obtenir une synthese clinique, les points de vigilance et les recommandations de verification.
+      </div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

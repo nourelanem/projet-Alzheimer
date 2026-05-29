@@ -1,0 +1,14 @@
+{
+  "class_to_index": {
+    "MildDemented": 0,
+    "ModerateDemented": 1,
+    "NonDemented": 2,
+    "VeryMildDemented": 3
+  },
+  "index_to_class": {
+    "0": "MildDemented",
+    "1": "ModerateDemented",
+    "2": "NonDemented",
+    "3": "VeryMildDemented"
+  }
+}
